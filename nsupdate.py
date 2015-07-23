@@ -22,7 +22,7 @@ class Record(object):
         self.ttl     = module.params['ttl']
         self.value      = module.params['value']
         self.keyring        = dns.tsigkeyring.from_text({
-            module.params['dns_key_name'] : module.params['dns_key_secret']
+            module.params['key_name'] : module.params['key_secret']
         })
 
     def create_record(self):
