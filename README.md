@@ -6,7 +6,7 @@ Like [nsupdate(8)](http://linux.die.net/man/8/nsupdate) ansible-nsupdate is used
   * enabled and properly configured secure updates in DNS server
 
 ### TODO
-  * implement rest of the record types
+  * implement remaining of the record types
   * implement proper error handling
 
 #### Pros
@@ -28,7 +28,7 @@ record | yes | | | DNS record to update
 type | no | A | A, CNAME | DNS record type, currently available A and CNAME
 ttl | no | 60 | | DNS record TTL in seconds
 value | no | | | DNS record value
-state | no | present | present, absent | Whether the account should exist or not, taking action if the state is different from what is stated
+state | no | present | present, absent | Whether the record should exist or not, taking action if the state is different from what is stated
 
 ## Example usage
 
