@@ -21,9 +21,12 @@ class Record(object):
         self.type    = module.params['type']
         self.ttl     = module.params['ttl']
         self.value      = module.params['value']
-        self.keyring        = dns.tsigkeyring.from_text({
-            module.params['key_name'] : module.params['key_secret']
-        })
+        if module.params.has_key('key_name'):
+            self.keyring = dns.tsigkeyring.from_text({
+                module.params['key_name'] : module.params['key_secret']
+            })
+        else:
+            self.keyring = None
 
     def create_record(self):
         update = dns.update.Update(self.zone, keyring=self.keyring)
