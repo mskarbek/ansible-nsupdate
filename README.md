@@ -1,19 +1,18 @@
 # ansible-nsupdate
 Like [nsupdate(8)](http://linux.die.net/man/8/nsupdate) ansible-nsupdate is used to submit Dynamic DNS Update requests.
+Used with the recent versions of BIND and Knot DNS servers.
 
 ### Requirements
   * [dnspython](http://www.dnspython.org/) - implemented with 1.12.0, it's possible that earlier versions may work
-  * enabled and properly configured secure updates in DNS server
 
 ### TODO
-  * implement remaining of the record types
   * implement proper error handling
 
 #### Pros
-  * works (most of the time)
+  * works
 
 #### Cons
-  * crappy implementation
+  * crappy implementation - don't expect any input validation
   * only basic error handling
 
 ## Options
@@ -21,30 +20,43 @@ Like [nsupdate(8)](http://linux.die.net/man/8/nsupdate) ansible-nsupdate is used
 parameter | required | default | choices | comments
 --------- | -------- | ------- | ------- | --------
 server | yes | | | DNS master server IP address
-key_name | yes | | | TSIG key name
-key_secret | yes | | | TSIG key secret
-zone | yes | | | DNS zone to update, fo example `example.com.` - dot at the end required
+key_name | no | | | TSIG key name
+key_secret | no | | | TSIG key secret
+zone | yes | | | DNS zone to update, for example `test.com`, can be ended with dot
 record | yes | | | DNS record to update
-type | no | A | A, CNAME | DNS record type, currently available A and CNAME
-ttl | no | 60 | | DNS record TTL in seconds
+type | no | A | | DNS record type
+ttl | no | 3600 | | DNS record TTL in seconds
 value | no | | | DNS record value
 state | no | present | present, absent | Whether the record should exist or not, taking action if the state is different from what is stated
 
 ## Example usage
 
-#### Adding record:
+#### Adding A record:
     ---
     - hosts: localhost
       connection: local
       tasks:
-        - name: add record
-          nsupdate: >
-            server=10.0.1.2
-            key_name=rndc-key
-            key_secret="XXXXXXXXXXXXXXXXXXXXXX=="
-            zone=example.com.
-            record=test
-            value=10.0.1.30
+        - name: add A record
+          nsupdate:
+            server: 10.0.1.2
+            key_name: rndc-key
+            key_secret: "XXXXXXXXXXXXXXXXXXXXXX=="
+            zone: example.com.
+            record: test
+            value: 10.0.1.30
+
+#### Adding PTR record:
+    ---
+    - hosts: localhost
+      connection: local
+      tasks:
+        - name: add PTR record
+          nsupdate:
+            server: 10.0.1.2
+            zone: 13.168.192.in-addr.arpa.
+            type: PTR
+            record: 13.13.168.192.in-addr.arpa.
+            value: test-13.test.com.
 
 #### Removing record:
     ---
@@ -52,10 +64,8 @@ state | no | present | present, absent | Whether the record should exist or not,
       connection: local
       tasks:
         - name: delete record
-          nsupdate: >
-            server=10.0.1.2
-            key_name=rndc-key
-            key_secret="XXXXXXXXXXXXXXXXXXXXXX=="
-            zone=example.com.
-            record=test
-            state=absent
+          nsupdate:
+            server: 10.0.1.2
+            zone: example.com
+            record: test
+            state: absent

@@ -15,18 +15,21 @@ class Record(object):
     def __init__(self, module):
         self.module         = module
         self.state          = module.params['state']
-        self.server     = module.params['server']
-        self.zone       = module.params['zone']
-        self.record    = module.params['record']
-        self.type    = module.params['type']
-        self.ttl     = module.params['ttl']
-        self.value      = module.params['value']
-        if module.params.has_key('key_name'):
-            self.keyring = dns.tsigkeyring.from_text({
+        self.server         = module.params['server']
+        if module.params['zone'][-1] != '.':
+            self.zone       = module.params['zone'] + '.'
+        else:
+            self.zone       = module.params['zone']
+        self.record         = module.params['record']
+        self.type           = module.params['type']
+        self.ttl            = module.params['ttl']
+        self.value          = module.params['value']
+        if module.params['key_name']:
+            self.keyring    = dns.tsigkeyring.from_text({
                 module.params['key_name'] : module.params['key_secret']
             })
         else:
-            self.keyring = None
+            self.keyring    = None
 
     def create_record(self):
         update = dns.update.Update(self.zone, keyring=self.keyring)
@@ -90,11 +93,11 @@ def main():
         argument_spec = dict(
             state=dict(required=False, default='present', choices=['present', 'absent'], type='str'),
             server=dict(required=True, type='str'),
-            key_name=dict(required=True, type='str'),
-            key_secret=dict(required=True, type='str'),
+            key_name=dict(required=False, type='str'),
+            key_secret=dict(required=False, type='str'),
             zone=dict(required=True, type='str'),
             record=dict(required=True, type='str'),
-            type=dict(required=False, default='A', choices=['A', 'CNAME'], type='str'),
+            type=dict(required=False, default='A', type='str'),
             ttl=dict(required=False, default=60, type='int'),
             value=dict(required=False, default=None, type='str')
         ),
