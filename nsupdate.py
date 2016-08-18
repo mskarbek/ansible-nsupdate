@@ -98,7 +98,7 @@ def main():
             zone=dict(required=True, type='str'),
             record=dict(required=True, type='str'),
             type=dict(required=False, default='A', type='str'),
-            ttl=dict(required=False, default=60, type='int'),
+            ttl=dict(required=False, default=3600, type='int'),
             value=dict(required=False, default=None, type='str')
         ),
         supports_check_mode=True
