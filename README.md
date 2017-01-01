@@ -22,6 +22,7 @@ parameter | required | default | choices | comments
 server | yes | | | DNS master server IP address
 key_name | no | | | TSIG key name
 key_secret | no | | | TSIG key secret
+key_algorithm | no | hmac-md5 | | TSIG key algorithm
 zone | yes | | | DNS zone to update, for example `test.com`, can be ended with dot
 record | yes | | | DNS record to update
 type | no | A | | DNS record type
