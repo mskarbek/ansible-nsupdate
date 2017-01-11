@@ -77,6 +77,8 @@ class Record(object):
         try:
             response = dns.query.tcp(update, self.server, timeout=10)
             if dns.message.Message.rcode(response) == 0:
+                if self.state == 'absent':
+                    return True
                 update.present(self.record, self.type, self.value)
                 response = dns.query.tcp(update, self.server, timeout=10)
                 if dns.message.Message.rcode(response) == 0:
