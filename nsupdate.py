@@ -114,6 +114,9 @@ def main():
         supports_check_mode=True
     )
 
+    if not HAVE_DNSPYTHON:
+        module.fail_json(msg='python library dnspython required: pip install dnspython')
+
     record = Record(module)
 
     success = None
@@ -125,9 +128,6 @@ def main():
     result['ttl'] = record.ttl
     result['value'] = record.value
     result['state'] = record.state
-
-    if not HAVE_DNSPYTHON:
-        module.fail_json(msg='python library dnspython required: pip install dnspython')
 
     exists = record.record_exists()
 
