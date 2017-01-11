@@ -30,9 +30,13 @@ class Record(object):
             })
         else:
             self.keyring    = None
+        if module.params['key_algorithm'] == 'hmac-md5':
+            self.algorithm  = 'HMAC-MD5.SIG-ALG.REG.INT'
+        else:
+            self.algorithm  = module.params['key_algorithm']
 
     def create_record(self):
-        update = dns.update.Update(self.zone, keyring=self.keyring)
+        update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
         update.add(self.record, self.ttl, self.type, self.value)
 
         try:
@@ -45,7 +49,7 @@ class Record(object):
             self.module.fail_json(msg='Connection to DNS server failed')
 
     def modify_record(self):
-        update = dns.update.Update(self.zone, keyring=self.keyring)
+        update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
         update.replace(self.record, self.ttl, self.type, self.value)
 
         try:
@@ -58,7 +62,7 @@ class Record(object):
             self.module.fail_json(msg='Connection to DNS server failed')
 
     def remove_record(self):
-        update = dns.update.Update(self.zone, keyring=self.keyring)
+        update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
         update.delete(self.record, self.type)
 
         try:
@@ -71,7 +75,7 @@ class Record(object):
             self.module.fail_json(msg='Connection to DNS server failed')
 
     def record_exists(self):
-        update = dns.update.Update(self.zone, keyring=self.keyring)
+        update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
         update.present(self.record, self.type)
 
         try:
@@ -91,12 +95,16 @@ class Record(object):
             self.module.fail_json(msg='Connection to DNS server failed')
 
 def main():
+    tsig_algs = ['HMAC-MD5.SIG-ALG.REG.INT', 'hmac-md5', 'hmac-sha1', 'hmac-sha224',
+                 'hmac-sha256', 'hamc-sha384', 'hmac-sha512']
+
     module = AnsibleModule(
         argument_spec = dict(
             state=dict(required=False, default='present', choices=['present', 'absent'], type='str'),
             server=dict(required=True, type='str'),
             key_name=dict(required=False, type='str'),
             key_secret=dict(required=False, type='str'),
+            key_algorithm=dict(required=False, default='hmac-md5', choices=tsig_algs, type='str'),
             zone=dict(required=True, type='str'),
             record=dict(required=True, type='str'),
             type=dict(required=False, default='A', type='str'),
