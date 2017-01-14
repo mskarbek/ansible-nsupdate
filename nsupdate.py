@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+from binascii import Error as binascii_error
+
 try:
     import dns.update
     import dns.query
@@ -25,9 +27,14 @@ class Record(object):
         self.ttl            = module.params['ttl']
         self.value          = module.params['value']
         if module.params['key_name']:
-            self.keyring    = dns.tsigkeyring.from_text({
-                module.params['key_name'] : module.params['key_secret']
-            })
+            try:
+                self.keyring    = dns.tsigkeyring.from_text({
+                    module.params['key_name'] : module.params['key_secret']
+                })
+            except TypeError:
+                module.fail_json(msg='Missing key_secret')
+            except binascii_error as kre:
+                module.fail_json(msg='TSIG key error: {}'.format(str(kre)))
         else:
             self.keyring    = None
         if module.params['key_algorithm'] == 'hmac-md5':
