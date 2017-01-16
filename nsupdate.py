@@ -103,7 +103,7 @@ def main():
             state=dict(required=False, default='present', choices=['present', 'absent'], type='str'),
             server=dict(required=True, type='str'),
             key_name=dict(required=False, type='str'),
-            key_secret=dict(required=False, type='str'),
+            key_secret=dict(required=False, type='str', no_log=True),
             key_algorithm=dict(required=False, default='hmac-md5', choices=tsig_algs, type='str'),
             zone=dict(required=True, type='str'),
             record=dict(required=True, type='str'),
