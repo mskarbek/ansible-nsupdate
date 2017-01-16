@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+from binascii import Error as binascii_error
+from socket import error as socket_error
+
 try:
     import dns.update
     import dns.query
@@ -25,9 +28,14 @@ class Record(object):
         self.ttl            = module.params['ttl']
         self.value          = module.params['value']
         if module.params['key_name']:
-            self.keyring    = dns.tsigkeyring.from_text({
-                module.params['key_name'] : module.params['key_secret']
-            })
+            try:
+                self.keyring    = dns.tsigkeyring.from_text({
+                    module.params['key_name'] : module.params['key_secret']
+                })
+            except TypeError:
+                module.fail_json(msg='Missing key_secret')
+            except binascii_error as kre:
+                module.fail_json(msg='TSIG key error: {}'.format(str(kre)))
         else:
             self.keyring    = None
         if module.params['key_algorithm'] == 'hmac-md5':
@@ -35,64 +43,74 @@ class Record(object):
         else:
             self.algorithm  = module.params['key_algorithm']
 
-    def create_record(self):
-        update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
-        update.add(self.record, self.ttl, self.type, self.value)
-
+    def __do_update(self, update):
         try:
             response = dns.query.tcp(update, self.server, timeout=10)
-            if dns.message.Message.rcode(response) == 0:
-                return True
-            else:
-                return False
-        except:
-            self.module.fail_json(msg='Connection to DNS server failed')
+        except (dns.tsig.PeerBadKey, dns.tsig.PeerBadSignature) as ee:
+            self.module.fail_json(msg='TSIG update error: {}'.format(str(ee)))
+        except (socket_error, dns.exception.Timeout) as ee:
+            self.module.fail_json(msg='DNS server error: {}'.format(str(ee)))
+        return response
+
+    def create_record(self):
+        update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
+        try:
+            update.add(self.record, self.ttl, self.type, self.value)
+        except AttributeError:
+            self.module.fail_json(msg='value needed when state=present')
+        except dns.exception.SyntaxError:
+            self.module.fail_json(msg='Invalid/malformed value')
+
+        response = self.__do_update(update)
+        if dns.message.Message.rcode(response) == 0:
+            return True
+        else:
+            return False
 
     def modify_record(self):
         update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
         update.replace(self.record, self.ttl, self.type, self.value)
 
-        try:
-            response = dns.query.tcp(update, self.server, timeout=10)
-            if dns.message.Message.rcode(response) == 0:
-                return True
-            else:
-                return False
-        except:
-            self.module.fail_json(msg='Connection to DNS server failed')
+        response = self.__do_update(update)
+        if dns.message.Message.rcode(response) == 0:
+            return True
+        else:
+            return False
 
     def remove_record(self):
         update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
         update.delete(self.record, self.type)
 
-        try:
-            response = dns.query.tcp(update, self.server, timeout=10)
-            if dns.message.Message.rcode(response) == 0:
-                return True
-            else:
-                return False
-        except:
-            self.module.fail_json(msg='Connection to DNS server failed')
+        response = self.__do_update(update)
+        if dns.message.Message.rcode(response) == 0:
+            return True
+        else:
+            return False
 
     def record_exists(self):
         update = dns.update.Update(self.zone, keyring=self.keyring, keyalgorithm=self.algorithm)
-        update.present(self.record, self.type)
-
         try:
-            response = dns.query.tcp(update, self.server, timeout=10)
-            if dns.message.Message.rcode(response) == 0:
-                if self.state == 'absent':
-                    return True
+            update.present(self.record, self.type)
+        except dns.rdatatype.UnknownRdatatype as ee:
+            self.module.fail_json(msg='Record error: {}'.format(str(ee)))
+
+        response = self.__do_update(update)
+        if dns.message.Message.rcode(response) == 0:
+            if self.state == 'absent':
+                return True
+            try:
                 update.present(self.record, self.type, self.value)
-                response = dns.query.tcp(update, self.server, timeout=10)
-                if dns.message.Message.rcode(response) == 0:
-                    return True
-                else:
-                    return 2
+            except AttributeError:
+                self.module.fail_json(msg='value needed when state=present')
+            except dns.exception.SyntaxError:
+                self.module.fail_json(msg='Invalid/malformed value')
+            response = self.__do_update(update)
+            if dns.message.Message.rcode(response) == 0:
+                return True
             else:
-                return False
-        except:
-            self.module.fail_json(msg='Connection to DNS server failed')
+                return 2
+        else:
+            return False
 
 def main():
     tsig_algs = ['HMAC-MD5.SIG-ALG.REG.INT', 'hmac-md5', 'hmac-sha1', 'hmac-sha224',
@@ -114,6 +132,9 @@ def main():
         supports_check_mode=True
     )
 
+    if not HAVE_DNSPYTHON:
+        module.fail_json(msg='python library dnspython required: pip install dnspython')
+
     record = Record(module)
 
     success = None
@@ -125,9 +146,6 @@ def main():
     result['ttl'] = record.ttl
     result['value'] = record.value
     result['state'] = record.state
-
-    if not HAVE_DNSPYTHON:
-        module.fail_json(msg='python library dnspython required: pip install dnspython')
 
     exists = record.record_exists()
 
