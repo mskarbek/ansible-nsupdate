@@ -1,5 +1,5 @@
 # ansible-nsupdate
-Like [nsupdate(8)](http://linux.die.net/man/8/nsupdate) ansible-nsupdate is used to submit Dynamic DNS Update requests.
+Like [nsupdate(8)](https://linux.die.net/man/8/nsupdate) ansible-nsupdate is used to submit Dynamic DNS Update requests.
 Used with the recent versions of BIND and Knot DNS servers.
 
 ### Requirements
